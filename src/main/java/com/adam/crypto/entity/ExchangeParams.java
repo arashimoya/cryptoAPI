@@ -1,13 +1,23 @@
 package com.adam.crypto.entity;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import lombok.NonNull;
 
-public class ExchangeParams {
+public final class ExchangeParams {
     @JsonAlias("from")
-    private String currencyFrom;
+    @NonNull
+    private final String currencyFrom;
     @JsonAlias("to")
-    private String[] currenciesTo;
-    private float amount;
+    @NonNull
+    private final String[] currenciesTo;
+    @NonNull
+    private final float amount;
+
+    public ExchangeParams(String currencyFrom, String[] currenciesTo, float amount) {
+        this.currencyFrom = currencyFrom;
+        this.currenciesTo = currenciesTo;
+        this.amount = amount;
+    }
 
     public String getCurrencyFrom() {
         return currencyFrom;

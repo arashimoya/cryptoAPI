@@ -3,11 +3,11 @@ package com.adam.crypto.entity;
 import lombok.Builder;
 
 @Builder
-public class CurrencyTo {
-    private String currencyName;
-    private float rate;
-    private double fee;
-    private float result;
+public final class CurrencyTo {
+    private final String currencyName;
+    private final float rate;
+    private final double fee;
+    private final float result;
 
     public String getCurrencyName() {
         return currencyName;

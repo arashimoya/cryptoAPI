@@ -8,10 +8,15 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class Quote {
+public final class Quote {
     @JsonAlias("asset_id_base")
-    private String source;
-    private List<Rate> rates;
+    private final String source;
+    private final List<Rate> rates;
+
+    public Quote(String source, List<Rate> rates) {
+        this.source = source;
+        this.rates = rates;
+    }
 
     public String getSource() {
         return source;
@@ -21,8 +26,8 @@ public class Quote {
         return rates;
     }
 
-    public void filterRates(String[] filter){
-        rates = getRates().stream().filter(
-                rate -> Arrays.stream(filter).anyMatch(s -> s.equals(rate.getAssetIdQuote()))).collect(Collectors.toList());
+    public Quote filterRates(String[] filter){
+        return new Quote(this.source, getRates().stream().filter(
+                rate -> Arrays.stream(filter).anyMatch(s -> s.equals(rate.getAssetIdQuote()))).collect(Collectors.toList()));
     }
 }
