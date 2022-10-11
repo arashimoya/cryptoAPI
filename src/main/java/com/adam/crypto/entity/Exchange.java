@@ -6,17 +6,17 @@ import lombok.Builder;
 import java.util.List;
 
 @Builder
-public class Exchange {
-    private String currencyFromName;
-    private float amount;
-    private List<CurrencyTo> currencyToList;
+public final class Exchange {
+    private final String currencyFromName;
+    private final float amount;
+    private final List<CurrencyTo> currencyToList;
 
 
     public String getCurrencyFromName() {
         return currencyFromName;
     }
 
-    public List<CurrencyTo> getCurrencyToList() {
+    public  List<CurrencyTo> getCurrencyToList() {
         return currencyToList;
     }
 

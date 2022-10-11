@@ -1,47 +1,74 @@
 package com.adam.crypto.service;
 
 
+import com.adam.crypto.entity.CurrencyTo;
 import com.adam.crypto.entity.Exchange;
 import com.adam.crypto.entity.ExchangeParams;
 import com.adam.crypto.entity.Quote;
-import com.adam.crypto.handler.RestTemplateErrorHandler;
+
+import com.adam.crypto.remotedatasource.CoinAPIClient;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.context.annotation.Bean;
-import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
-
-import org.springframework.http.HttpHeaders.*;
-import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
-public class CoinAPIServiceImpl  implements CoinAPIService{
+public final class CoinAPIServiceImpl  implements CoinAPIService{
 
-    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(3);
-
-
-
-    private RestTemplate restTemplate;
+    private final CoinAPIClient coinAPIClient;
 
     @Autowired
-    public CoinAPIServiceImpl(@Value("${app.api-key}") String API_KEY, RestTemplateBuilder restTemplateBuilder){
-        restTemplate = restTemplateBuilder
-                .defaultHeader("X-CoinAPI-Key", API_KEY)
-                .errorHandler(new RestTemplateErrorHandler())
-                .build();
+    public CoinAPIServiceImpl(CoinAPIClient coinAPIClient){
+        this.coinAPIClient = coinAPIClient;
+
     }
-
-
 
     @Override
-    public Quote getQuote(String currency) {
+    public Quote getQuote(String currency, String[] filter) {
 
-        return restTemplate.getForObject("http://rest.coinapi.io/v1/exchangerate/" + currency, Quote.class);
+        Optional<Quote> opt = coinAPIClient.getQuote(currency);
+        Quote filteredQuote;
+        if(opt.isPresent()){
+            filteredQuote = opt.get();
+        } else{
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+
+        if(filter !=null && filter.length !=0 ){
+            filteredQuote = filteredQuote.filterRates(
+                    Arrays.stream(filter).map(String::toUpperCase).toArray(String[]::new));
+        }
+
+        return filteredQuote;
     }
+    @Override
+    public Exchange getExchange(ExchangeParams exchangeParams) {
+        Optional<Quote> optQuote = coinAPIClient.getQuote(exchangeParams.getCurrencyFrom());
+        if(optQuote.isPresent()) {
+            Quote filteredQuote = optQuote.get().filterRates(exchangeParams.getCurrenciesTo());
 
+            List<CurrencyTo> currencyToList = filteredQuote.getRates().stream().map(rate -> CurrencyTo.builder()
+                    .currencyName(rate.getAssetIdQuote())
+                    .fee(rate.getRate() * 0.01)
+                    .rate(rate.getRate())
+                    .result((exchangeParams.getAmount() * rate.getRate()))
+                    .build()).collect(Collectors.toList());
+
+            return Exchange.builder()
+                    .currencyToList(currencyToList)
+                    .currencyFromName(exchangeParams.getCurrencyFrom())
+                    .amount(exchangeParams.getAmount())
+                    .build();
+        }
+        else{
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+    }
 
 
 }
