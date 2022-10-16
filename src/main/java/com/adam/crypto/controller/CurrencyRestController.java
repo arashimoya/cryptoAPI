@@ -12,7 +12,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/currencies")
@@ -26,7 +25,7 @@ public final class CurrencyRestController {
     }
 
     @GetMapping("/{currency}")
-    public Quote getQuotes(@PathVariable String currency, @RequestParam(required = false) String[] filter){
+    public Quote getQuotes(@PathVariable String currency, @RequestParam(required = false) List<String> filter){
 
         if(currency==null){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
@@ -42,12 +41,8 @@ public final class CurrencyRestController {
         } else if(exchangeParams.getCurrencyFrom() == null || exchangeParams.getCurrenciesTo() == null){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }else {
-            Exchange exchange = coinAPIService.getExchange(exchangeParams);
-            System.out.println(exchange.toString());
-            return exchange;
+            return coinAPIService.getExchange(exchangeParams);
         }
-
-
     }
 
 }

@@ -2,26 +2,28 @@ package com.adam.crypto.entity;
 
 import lombok.Builder;
 
+import java.math.BigDecimal;
+
 @Builder
 public final class CurrencyTo {
     private final String currencyName;
-    private final float rate;
-    private final double fee;
-    private final float result;
+    private final BigDecimal rate;
+    private final BigDecimal fee;
+    private final BigDecimal result;
 
     public String getCurrencyName() {
         return currencyName;
     }
 
-    public float getRate() {
+    public BigDecimal getRate() {
         return rate;
     }
 
-    public double getFee() {
+    public BigDecimal getFee() {
         return fee;
     }
 
-    public float getResult() {
+    public BigDecimal getResult() {
         return result;
     }
 }

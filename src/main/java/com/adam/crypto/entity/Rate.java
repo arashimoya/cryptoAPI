@@ -3,15 +3,15 @@ package com.adam.crypto.entity;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-import java.sql.Timestamp;
+import java.math.BigDecimal;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public final class Rate {
     @JsonAlias("asset_id_quote")
     private final String assetIdQuote;
-    private final float rate;
+    private final BigDecimal rate;
 
-    public Rate(String assetIdQuote, float rate) {
+    public Rate(String assetIdQuote, BigDecimal rate) {
         this.assetIdQuote = assetIdQuote;
         this.rate = rate;
     }
@@ -20,7 +20,7 @@ public final class Rate {
         return assetIdQuote;
     }
 
-    public float getRate() {
+    public BigDecimal getRate() {
         return rate;
     }
 }

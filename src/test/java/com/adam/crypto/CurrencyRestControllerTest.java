@@ -1,10 +1,12 @@
 package com.adam.crypto;
 
-import com.adam.crypto.entity.Exchange;
-import com.adam.crypto.entity.ExchangeParams;
-import com.adam.crypto.entity.Quote;
+import com.adam.crypto.entity.*;
 import com.adam.crypto.service.CoinAPIService;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import org.junit.Before;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,9 +16,16 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
+
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasToString;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest
@@ -26,12 +35,12 @@ class CurrencyRestControllerTest {
     @Autowired
     MockMvc mockMvc;
     @MockBean
+    JsonSerializer<ExchangeParams> exchangeParamsJsonSerializer;
+    @MockBean
     CoinAPIService coinAPIService;
 
     @Autowired
     ObjectMapper mapper;
-
-
 
     //getQuota
     @Test
@@ -65,16 +74,19 @@ class CurrencyRestControllerTest {
     public void whenValueIsBTC_thenReturnsQuotaForBTC() throws Exception{
         String currency_id = "BTC";
 
-        Quote quote = Mockito.mock(Quote.class);
+        ArrayList<String> filter = new ArrayList<>();
 
-        Mockito.when(coinAPIService.getQuote(currency_id, new String[0])).thenReturn(quote);
+        Quote quote = new Quote(currency_id, new ArrayList<>());
+
+        Mockito.when(coinAPIService.getQuote(currency_id, filter)).thenReturn(quote);
 
         mockMvc.perform(MockMvcRequestBuilders
                         .get(baseUrl + currency_id)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
+                        .accept(MediaType.APPLICATION_JSON)
+                        .param("filter", ""))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", contains(currency_id)))
+                .andExpect(jsonPath("$.source", hasToString(currency_id)))
                 .andDo(MockMvcResultHandlers.print());
     }
 
@@ -82,22 +94,26 @@ class CurrencyRestControllerTest {
     public void when2FiltersGiven_thenReturnQuotaWith2Currencies() throws Exception{
         String currency_id = "BTC";
 
-        Quote quote = Mockito.mock(Quote.class);
+        ArrayList<Rate> rates = new ArrayList<Rate>();
+        rates.add(new Rate("DOGE", BigDecimal.valueOf(326286.16521820497008772323498)));
+        rates.add(new Rate("ETH", BigDecimal.valueOf(14.818612578725771406186817)));
+        Quote quote = new Quote(currency_id, rates);
 
-        String[] filter = new String[]{
-                "ETH",
-                "USDT"
-        };
+        ArrayList<String> filter = new ArrayList<>();
+        filter.add("ETH");
+        filter.add("DOGE");
 
-        Mockito.when(coinAPIService.getQuote(currency_id, new String[0])).thenReturn(quote);
+        Mockito.when(coinAPIService.getQuote(currency_id, filter)).thenReturn(quote);
 
         mockMvc.perform(MockMvcRequestBuilders
                         .get(baseUrl + currency_id)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
+                        .accept(MediaType.APPLICATION_JSON)
+                        .param("filter", filter.get(0))
+                        .param("filter", filter.get(1)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", contains(filter[0])))
-                .andExpect(jsonPath("$", contains(filter[1])))
+                .andExpect(jsonPath("$.rates.[1].assetIdQuote", hasToString(filter.get(0))))
+                .andExpect(jsonPath("$.rates.[0].assetIdQuote", hasToString(filter.get(1))))
                 .andDo(MockMvcResultHandlers.print());
     }
 
@@ -153,22 +169,35 @@ class CurrencyRestControllerTest {
 
     @Test
     public void whenManyValidValues_thenReturn200_andReturnExchangeContainingTheSameValues() throws Exception{
+        String currencyFrom = "DOGE";
         String[] filter = new String[]{
                 "ETH",
-                "BTC",
                 "USDT"
         };
-        ExchangeParams exchangeParams = new ExchangeParams("DOGE", filter,123);
+        ExchangeParams exchangeParams = new ExchangeParams(currencyFrom, filter,121);
 
-        Mockito.when(coinAPIService.getExchange(exchangeParams)).thenThrow(ResponseStatusException.class);
+        List<CurrencyTo> currencyToList = new ArrayList<>();
+
+
+        Exchange exchange = Exchange.builder()
+                .amount(121)
+                .currencyFromName("")
+                .currencyToList(currencyToList)
+                .build();
+
+        ObjectWriter ow = mapper.writer().withDefaultPrettyPrinter();
+        String requestJson = ow.writeValueAsString(exchangeParams);
+
+        Mockito.when(coinAPIService.getExchange(exchangeParams)).thenReturn(exchange);
 
         mockMvc.perform(MockMvcRequestBuilders
-                        .get(baseUrl+"exchange")
-                        .content(mapper.writeValueAsString(exchangeParams)))
+                        .post(baseUrl+"exchange")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .characterEncoding(StandardCharsets.UTF_8)
+                        .content(requestJson))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", contains(filter[0])))
-                .andExpect(jsonPath("$", contains(filter[1])))
-                .andExpect(jsonPath("$", contains(filter[2])));
+                .andExpect(jsonPath("$", contains(filter[1])));
     }
 
 
